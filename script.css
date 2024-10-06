@@ -1,0 +1,92 @@
+const fileSizeSelect = document.getElementById('fileSize');
+const customSizeInput = document.getElementById('customSize');
+const imageForm = document.getElementById('imageForm');
+const output = document.getElementById('output');
+const previewImage = document.getElementById('previewImage');
+const downloadLink = document.getElementById('downloadLink');
+const orientationSelect = document.getElementById('orientation');
+const widthInput = document.getElementById('width');
+const heightInput = document.getElementById('height');
+const toggleButton = document.getElementById('toggleMode');
+
+let originalWidth, originalHeight;
+
+fileSizeSelect.addEventListener('change', function() {
+    if (fileSizeSelect.value === 'custom') {
+        customSizeInput.style.display = 'block';
+    } else {
+        customSizeInput.style.display = 'none';
+    }
+});
+
+document.getElementById('imageFile').addEventListener('change', function(event) {
+    const fileInput = event.target.files[0];
+    if (fileInput) {
+        const reader = new FileReader();
+        reader.readAsDataURL(fileInput);
+        reader.onload = function(e) {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = function() {
+                originalWidth = img.width;
+                originalHeight = img.height;
+            };
+        };
+    }
+});
+
+widthInput.addEventListener('input', function() {
+    const width = parseInt(widthInput.value);
+    if (originalWidth && originalHeight) {
+        const aspectRatio = originalHeight / originalWidth;
+        const newHeight = Math.round(width * aspectRatio);
+        heightInput.value = newHeight;
+    }
+});
+
+imageForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const fileInput = document.getElementById('imageFile').files[0];
+    const fileSize = fileSizeSelect.value === 'custom' ? customSizeInput.value : fileSizeSelect.value;
+    const width = parseInt(widthInput.value);
+    const height = parseInt(heightInput.value);
+    const orientation = orientationSelect.value;
+
+    if (!fileInput) {
+        output.innerHTML = '<p>Please upload an image file.</p>';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.readAsDataURL(fileInput);
+    reader.onload = function(event) {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = function() {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(function(blob) {
+                const compressedUrl = URL.createObjectURL(blob);
+                previewImage.src = compressedUrl;
+                previewImage.style.display = 'block';
+
+                if (orientation === 'portrait') {
+                    previewImage.classList.add('portrait');
+                } else {
+                    previewImage.classList.add('landscape');
+                }
+
+                downloadLink.href = compressedUrl;
+                downloadLink.style.display = 'inline-block';
+            }, 'image/jpeg', fileSize / 100);
+        };
+    };
+});
+
+toggleButton.addEventListener('click', function() {
+    document.body.classList.toggle('dark-mode');
+});
